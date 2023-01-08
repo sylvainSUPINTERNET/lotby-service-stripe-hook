@@ -2,6 +2,12 @@
 server:
   port: 5000 # beanstalk default port
 
+
+telegram:
+  botToken: ${telegram_token:}
+  botName: ${telegram_bot_name:}
+
+
 stripe:
   api:
     secretKey: ${stripe_sk}
