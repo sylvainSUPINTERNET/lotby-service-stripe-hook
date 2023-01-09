@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.springframework.beans.factory.annotation.Value;
 
+import com.google.gson.Gson;
 import com.lotby.webhookstripe.bot.SalesBot;
 import com.lotby.webhookstripe.repositories.NotificationRepository;
 import com.stripe.exception.SignatureVerificationException;
@@ -70,15 +71,18 @@ public class WebhookController {
           case "payment_intent.succeeded":
             // ...
             logger.info("payment_intent.succeeded triggered");
-            System.out.println(event.toJson());
-            
-            
+
+            Gson gson = new Gson();
+            System.out.println(gson.toJson(event.toJson()));
+
+            // yourObject o = gson.fromJson(JSONString,yourObject.class);
+          
             // Notifiy all subscribers chat
               
               this.notificationRepository.findAll().forEach(notification -> {
                 logger.info("Sending notification to " + notification.getChatId());
                 // String url = "https://dashboard.stripe.com/payments/"+stripeObject.getId();
-                
+
                 String msgToNotify = "Payment Succeeded, don't forget to send the email";
                 try {
                   this.salesBot.sendNotification(notification.getChatId(), msgToNotify);
