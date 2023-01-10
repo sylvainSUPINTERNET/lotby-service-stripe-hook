@@ -4,8 +4,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.springframework.beans.factory.annotation.Value;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.gson.Gson;
 import com.lotby.webhookstripe.bot.SalesBot;
+import com.lotby.webhookstripe.records.NotificationInfo;
+import com.lotby.webhookstripe.records.PaymentSuccessWebhookPayload;
 import com.lotby.webhookstripe.repositories.NotificationRepository;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
@@ -18,6 +23,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+
+import java.util.Map;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,22 +81,40 @@ public class WebhookController {
             // ...
             logger.info("payment_intent.succeeded triggered");
 
-            Gson gson = new Gson();
-            System.out.println(gson.toJson(event.toJson()));
+            String dashboardProductUrl = "https://dashboard.stripe.com/payments"; // https://dashboard.stripe.com/test/payments
 
-            // yourObject o = gson.fromJson(JSONString,yourObject.class);
+            // System.out.println(event.toJson());
+
+            final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            NotificationInfo notificationInfo = new NotificationInfo("");
+            
+            try {
+              PaymentSuccessWebhookPayload m = mapper.readValue(event.toJson(), PaymentSuccessWebhookPayload.class);
+
+              if ( m.data().object().id() != null ) {
+                dashboardProductUrl = dashboardProductUrl + "/" + m.data().object().id();
+              }
+
+              if ( m.data().receiptEmail() != null) {
+                notificationInfo.setMsgForTelegramChat(dashboardProductUrl+", don't forget to send the email: "+m.data().receiptEmail());
+              } else {
+                notificationInfo.setMsgForTelegramChat(dashboardProductUrl+", not able to retrieve the email receipt");
+              }
+
+            } catch ( Exception e ) {
+                logger.info("Serialize error", e);
+            }
           
+
             // Notifiy all subscribers chat
               
               this.notificationRepository.findAll().forEach(notification -> {
                 logger.info("Sending notification to " + notification.getChatId());
                 // String url = "https://dashboard.stripe.com/payments/"+stripeObject.getId();
-
-                String msgToNotify = "Payment Succeeded, don't forget to send the email";
                 try {
-                  this.salesBot.sendNotification(notification.getChatId(), msgToNotify);
+                  this.salesBot.sendNotification(notification.getChatId(), notificationInfo.getMsgForTelegramChat());
                 } catch ( TelegramApiException e ) {
-                  logger.info("Error", e.getMessage());
+                  logger.info("Error", e);
                 }
               });
             break;

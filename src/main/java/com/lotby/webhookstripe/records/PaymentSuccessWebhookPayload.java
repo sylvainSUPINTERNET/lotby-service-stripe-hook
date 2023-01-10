@@ -1,12 +1,10 @@
 package com.lotby.webhookstripe.records;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-// public record
-
-
-// public record PaymentSuccessWebhookPayload(data) {
-
-// }
+public record PaymentSuccessWebhookPayload(
+    @JsonProperty("data") PaymentSuccessWebhookPayloadData data
+){}
 
 // // exemple 
 // //https://medium.com/javarevisited/what-are-the-new-features-of-springboot3-6ddba9af664
