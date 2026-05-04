@@ -1,8 +1,6 @@
 # Bot 
 
 
-
-
 ```` bash 
 
 export telegram_token=""
